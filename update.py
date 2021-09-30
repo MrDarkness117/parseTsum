@@ -1,5 +1,6 @@
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
+import json
 
-driver = webdriver.Chrome(ChromeDriverManager().install())
-driver.get('http://google.com')
+with open('{}.json', 'r+', encoding='utf-8') as t:
+    info = json.load(t)
+    json.dump(info, t, ensure_ascii=False, indent=4)
+    t.close()
