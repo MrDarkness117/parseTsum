@@ -45,15 +45,16 @@ brands = [
     'Lemon Jelly', "L'Impermeabile", 'Marsell', 'Merola Gloves', 'Moose Knuckles', 'Moreschi', 'Moschino', 'Panchic',
     'Pantanetti', 'Parajumpers', 'Pasotti', 'Pertini', 'Pierre Cardin', 'Pollini', 'Portolano', 'Premiata',
     'Principe Di Bologna', 'RBRSL', "Reptile's House", 'Roberto Cavalli', 'Rocco P', 'Sergio Rossi', 'SPRAYGROUND',
-    'Stemar', 'Stuart Weitzman', 'V SEASON', "VIC MATIE'", 'Voile Blanche', 'What For', 'Walford', '3JUIN',
+    'Stemar', 'Stuart Weitzman', 'V SEASON', "VIC MATIE'", 'Voile Blanche', 'What For', 'Wolford', '3JUIN',
     'Premiata will be', 'Sprayground'
 ]
 
-search_values = ['Wolford', 'RBRSL']
+search_values = ['Wolford', 'RBRSL', "Rocco P", "DKNY", 'Flower Mountain', 'HIDE&JACK', 'Inuikii', 'Lancaster']
+# search_values = ['Coccinelle', 'Wolford', 'RBRSL', "Rocco P", "DKNY", 'Flower Mountain', 'HIDE&JACK', 'Inuikii', 'Lancaster']
 
 categories = [
-    # 'Мужское',
-    # "Женское",
+    "Женское",
+    'Мужское',
     "Детское"
 ]
 
@@ -68,35 +69,47 @@ tables = {}
 count = 0
 closed = False
 
+scrolled = False
+
 
 def open_brands():
     driver.get(url_brands)
     for c in categories:
         try:
             driver.find_element_by_xpath('//div[@class="header__gender-switch header__gender-switch_desktop"]//span[contains(text(), "{}")]'.format(c)).click()
-        except:
+            driver.find_element_by_xpath("//a[contains(text(), 'Бренды')]")
+        except Exception as e:
             print('Category ' + c + ' already open')
+
         for el in brands:
-            driver.get(url_brands)
+            global scrolled
+            scrolled = False
+            scroll_brands()
             try:
-                driver.execute_script('window.scrollBy(0, 7000)')
-                time.sleep(1)
-                WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
-                    (By.XPATH, '//span[@class="brand-list__full-show"]')
-                ))
-                driver.find_element_by_xpath('//span[@class="brand-list__full-show"]').click()
-                time.sleep(2)
-                driver.execute_script('window.scrollBy(0, 7000)')
-                time.sleep(1)
-                driver.execute_script('window.scrollBy(0, 7000)')
-                time.sleep(1)
-                driver.execute_script('window.scrollBy(0, 7000)')
-                time.sleep(1)
-                driver.execute_script('window.scrollBy(0, 7000)')
                 driver.find_element_by_xpath('//span[contains(text(), "{}")]'.format(el)).click()
                 write_data()
             except Exception as e:
                 print(el + " not found in the list, skipping.")
+
+
+def scroll_brands():
+    driver.get(url_brands)
+    driver.execute_script('window.scrollBy(0, 7000)')
+    time.sleep(1)
+    WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+        (By.XPATH, '//span[@class="brand-list__full-show"]')
+    ))
+    driver.find_element_by_xpath('//span[@class="brand-list__full-show"]').click()
+    time.sleep(2)
+    driver.execute_script('window.scrollBy(0, 7000)')
+    time.sleep(1)
+    driver.execute_script('window.scrollBy(0, 7000)')
+    time.sleep(1)
+    driver.execute_script('window.scrollBy(0, 7000)')
+    time.sleep(1)
+    driver.execute_script('window.scrollBy(0, 7000)')
+    global scrolled
+    scrolled = True
 
 
 def search():
@@ -143,21 +156,6 @@ def change_page():
         time.sleep(2)
 
 
-# def gather(counter, el):
-#         article = re.sub("[^0-9]", '', el.find_element_by_xpath(
-#             '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-#             '/div/div/a'.format(counter)).get_attribute('href'))[:7]
-#         price = re.sub("[^0-9]", '', el.find_element_by_xpath(
-#             '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-#             '//span[@class="product__price-wrapper"]/span/span/span'.format(counter)).text)
-#         brand = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]/div//'
-#                                          'a/p[@class="product__brand"]'.format(counter)).text
-#         link = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-#                                         '/div/div/a'.format(counter)).get_attribute('href')
-#
-#         tables[article] = [price, brand, link]
-
-
 def get_data():
     # driver.execute_script('window.scrollBy(0, -7000)')
     print('Get prices')
@@ -176,26 +174,53 @@ def get_data():
         try:
             title = str(el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]'
                                                           '/div[{}]/div/div/a/*[1]'.format(counter)).get_attribute('title'))
-            section_base = '//div[@class="product-list__products ng-star-inserted"]/div[{}]'.format(counter)
-            # print(section_base)
-            for bit in [
-                '/div/div/a',
-                '//span[@class="product__price-wrapper"]/span/span/span',
-                '/div//a/p[@class="product__brand"]',
-            ]:
-                WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, section_base + bit)))
-            article = re.sub("[^0-9]", '', el.find_element_by_xpath(
-                '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                '/div/div/a'.format(counter)).get_attribute('href'))[:7]
-            price = re.sub("[^0-9]", '', el.find_element_by_xpath(
-                '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                '//span[@class="product__price-wrapper"]/span/span/span'.format(counter)).text)
-            brand = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]/div//'
-                                             'a/p[@class="product__brand"]'.format(counter)).text
-            link = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                            '/div/div/a'.format(counter)).get_attribute('href')
-            description = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                            '//p[@class="product__description"]'.format(counter)).text
+            # section_base = '//div[@class="product-list__products ng-star-inserted"]/div[{}]'.format(counter)
+
+            # for bit in [
+            #     '/div/div/a',
+            #     '//span[@class="product__price-wrapper"]/span/span/span',
+            #     '/div//a/p[@class="product__brand"]',
+            # ]:
+            #     WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, section_base + bit)))
+            try:
+                article = re.sub("[^0-9]", '', el.find_element_by_xpath(
+                    '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                    '/div/div/a'.format(counter)).get_attribute('href'))[:7]
+            except Exception as e:
+                print("Failed to obtain article.")
+                continue
+
+            try:
+                price = re.sub("[^0-9]", '', el.find_element_by_xpath(
+                    '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                    '//span[@class="price"]'.format(counter)).text)
+            except Exception as e:
+                print("Failed to obtain price, obtaining discount")
+                price = re.sub("[^0-9]", '', el.find_element_by_xpath(
+                    '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                    '//span[@class="price price_type_new"]/span'.format(counter)).text)
+
+            try:
+                brand = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                                                 '//p[@class="product__brand"]'.format(counter)).text
+            except:
+                print("Failed to obtain brand.")
+                continue
+
+            try:
+                link = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                                                '/div/div/a'.format(counter)).get_attribute('href')
+            except:
+                print("Failed to obtain link.")
+                continue
+
+            try:
+                description = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                                                '//p[@class="product__description"]'.format(counter)).text
+            except:
+                print("Failed to obtain description.")
+                continue
+
             article_brand = ' '.join(
                 ' '.join(title.replace(description.lower() + ' ', '').replace(brand + ' ', "").split(' ')[5:]).replace("руб., арт. ", "")
                 .replace("| ", "").replace(" Фото 1", "").replace("Фото", "").replace("арт. ", "").replace("цвета ", "")
@@ -208,7 +233,7 @@ def get_data():
 
             tables[article] = [price, brand, article_brand, link]
         except Exception as e:
-            print("Exception detected: " + str(e))
+            print("Exception detected while parsing: " + str(e))
             global failed_pages
             failed_pages['pages'].append(re.sub('[^0-9]', '', str(driver.current_url)[-3:]).replace('=', ''))
     # print("Total: \n" + str(tables))
@@ -227,27 +252,31 @@ def write_data():
     # print(tables)
 
 
-def write_file(url, filename):
+def write_file(url, filename, params=0):
     try:
-        """ ==== FULL ==== """
-        # driver.get(url)
-        # write_data()
-        """ ==== BRANDS ==== """
-        # open_brands()
-        """ ==== SEARCH ==== """
-        search()
+        if params == 0:
+            """ ==== FULL ==== """
+            driver.get(url)
+            write_data()
+        elif params == 1:
+            """ ==== BRANDS ==== """
+            open_brands()
+        elif params == 2:
+            """ ==== SEARCH ==== """
+            search()
     except Exception as e:
         print("Error caught, terminating: " + str(e))
     print('Writing file...')
     if not path.exists('{}.json'.format(filename)):
         with open('{}.json'.format(filename), 'w') as t:
             json.dump({}, t)
+            t.close()
 
     with open('{}.json'.format(filename), 'r+', encoding='utf-8') as t:
         info = json.load(t)
         t.seek(0)
-        tables.update(info)
-        json.dump(tables, t, ensure_ascii=False, indent=4)
+        info.update(tables)
+        json.dump(info, t, ensure_ascii=False, indent=4)
         t.truncate()
         print('...Completed writing')
         t.close()
@@ -258,16 +287,23 @@ def write_file(url, filename):
         p.close()
 
 
-# write_file(url_m, 'obuv_m')
-# write_file(url_f, 'obuv_f')
-# write_file(url_f_modded, 'obuv_f_modded')
-# write_file(url_f_f_wd_av, 'obuv_f_f_wd_av')
-# write_file(url_f_le_silla_av, 'obuv_f_le_silla_av')
-# write_file(url_f_modded, 'obuv_f_modded_3')
-# write_file(url_m_modded, 'obuv_m_modded')
-# write_file(url_f4, 'obuv_f')
-# write_file(url_f_sumki, 'sumki_f')
-# write_file(url_f_aksess, 'aksessuari_f')
-write_file(url_brands, 'brands_search_wolford_rbrsl')
+def run():
+    # write_file(url_m, 'obuv_m')
+    # write_file(url_f, 'obuv_f')
+    # write_file(url_f_modded, 'obuv_f_modded')
+    # write_file(url_f_f_wd_av, 'obuv_f_f_wd_av')
+    # write_file(url_f_le_silla_av, 'obuv_f_le_silla_av')
+    # write_file(url_f_modded, 'obuv_f_modded_3')
+    # write_file(url_m_modded, 'obuv_m_modded')
+    # write_file(url_f4, 'obuv_f')
+    # write_file(url_f_sumki, 'sumki_f')
+    # write_file(url_f_aksess, 'aksessuari_f')
+    write_file(url_brands, 'TSUM_brands_full', params=1)
+    write_file(url_brands, 'TSUM_brands_full', params=2)
+    # write_file(url_brands, 'brands_search_wolford_rbrsl')
 
-print("End: " + str(datetime.datetime.now()))
+    print("End: " + str(datetime.datetime.now()))
+
+
+if __name__ == '__main__':
+    run()
