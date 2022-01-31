@@ -173,7 +173,7 @@ def get_data():
                 '//ul[@class="list-items list-view-1 js-list-items"]/li[{}]'
                     .format(counter)).get_attribute('data-productinfo')).replace('\'', '"'))
             try:
-                title = productinfo['name']
+                title = productinfo['name'].replace(productinfo['brand'] + ' ', '')
             except:
                 print('Failed to obtain price')
             # id = productinfo['id']
@@ -188,7 +188,7 @@ def get_data():
             try:
                 link = str(el.find_element_by_xpath(
                     '//ul[@class="list-items list-view-1 js-list-items"]/li[{}]//a[@class="item-link"]'.format(counter))
-                           .get_attribute('href')) + ' '
+                           .get_attribute('href'))
             except:
                 print("Failed to obtain link")
 

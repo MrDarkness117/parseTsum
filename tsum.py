@@ -76,7 +76,9 @@ def open_brands():
     driver.get(url_brands)
     for c in categories:
         try:
-            driver.find_element_by_xpath('//div[@class="header__gender-switch header__gender-switch_desktop"]//span[contains(text(), "{}")]'.format(c)).click()
+            driver.find_element_by_xpath(
+                '//div[@class="header__gender-switch header__gender-switch_desktop"]//span[contains(text(), "{}")]'
+                    .format(c)).click()
             driver.find_element_by_xpath("//a[contains(text(), 'Бренды')]")
         except Exception as e:
             print('Category ' + c + ' already open')
@@ -171,9 +173,11 @@ def get_data():
     for el in elems:
         counter += 1
         driver.execute_script('window.scrollBy(0, {})'.format(counter * 20))
+        old_price = 0
+        discount = 0
         try:
             title = str(el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]'
-                                                          '/div[{}]/div/div/a/*[1]'.format(counter)).get_attribute('title'))
+                                                 '/div[{}]/div/div/a/*[1]'.format(counter)).get_attribute('title'))
             # section_base = '//div[@class="product-list__products ng-star-inserted"]/div[{}]'.format(counter)
 
             # for bit in [
@@ -191,6 +195,9 @@ def get_data():
                 continue
 
             try:
+                WebDriverWait(driver, 0.2).until(EC.visibility_of_element_located(
+                    (By.XPATH, '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                               '//span[@class="price"]'.format(counter))))
                 price = re.sub("[^0-9]", '', el.find_element_by_xpath(
                     '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
                     '//span[@class="price"]'.format(counter)).text)
@@ -199,6 +206,10 @@ def get_data():
                 price = re.sub("[^0-9]", '', el.find_element_by_xpath(
                     '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
                     '//span[@class="price price_type_new"]/span'.format(counter)).text)
+                old_price = re.sub("[^0-9]", '', el.find_element_by_xpath(
+                    '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
+                    '//span[@class="price price_type_old"]'.format(counter)).text)
+                discount = "{:.2f}".format(100 - round(int(price) / int(old_price) * 100)) + "%"
 
             try:
                 brand = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
@@ -216,22 +227,26 @@ def get_data():
 
             try:
                 description = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                '//p[@class="product__description"]'.format(counter)).text
+                                                       '//p[@class="product__description"]'.format(counter)).text
             except:
                 print("Failed to obtain description.")
                 continue
 
             article_brand = ' '.join(
-                ' '.join(title.replace(description.lower() + ' ', '').replace(brand + ' ', "").split(' ')[5:]).replace("руб., арт. ", "")
-                .replace("| ", "").replace(" Фото 1", "").replace("Фото", "").replace("арт. ", "").replace("цвета ", "")
-                .replace("цене ", "").replace(price, "").replace('по ', "").replace("бежевого ", "").replace("черного ", "")
-                .replace("серого ", '').replace("белого ", "").replace("темно-синего ", "").replace("хаки ", "")
-                .replace("серебряного ", "").replace("синего ", "").replace("розового ", "").replace("золотого ", "")
-                .replace("коричневого ", "").split(' '))
+                ' '.join(title.replace(description.lower() + ' ', '').replace(brand + ' ', "").split(' ')[5:]).replace(
+                    "руб., арт. ", "")
+                    .replace("| ", "").replace(" Фото 1", "").replace("Фото", "").replace("арт. ", "").replace("цвета ",
+                                                                                                               "")
+                    .replace("цене ", "").replace(price, "").replace('по ', "").replace("бежевого ", "").replace(
+                    "черного ", "")
+                    .replace("серого ", '').replace("белого ", "").replace("темно-синего ", "").replace("хаки ", "")
+                    .replace("серебряного ", "").replace("синего ", "").replace("розового ", "").replace("золотого ",
+                                                                                                         "")
+                    .replace("коричневого ", "").split(' '))
             if article_brand[0] == ' ': article_brand = article_brand[1:]
             # print(article_brand)
 
-            tables[article] = [price, brand, article_brand, link]
+            tables[article] = [price, old_price, discount, brand, article_brand, link]
         except Exception as e:
             print("Exception detected while parsing: " + str(e))
             global failed_pages
@@ -288,19 +303,9 @@ def write_file(url, filename, params=0):
 
 
 def run():
-    # write_file(url_m, 'obuv_m')
-    # write_file(url_f, 'obuv_f')
-    # write_file(url_f_modded, 'obuv_f_modded')
-    # write_file(url_f_f_wd_av, 'obuv_f_f_wd_av')
-    # write_file(url_f_le_silla_av, 'obuv_f_le_silla_av')
-    # write_file(url_f_modded, 'obuv_f_modded_3')
-    # write_file(url_m_modded, 'obuv_m_modded')
-    # write_file(url_f4, 'obuv_f')
-    # write_file(url_f_sumki, 'sumki_f')
-    # write_file(url_f_aksess, 'aksessuari_f')
+
     write_file(url_brands, 'TSUM_brands_full', params=1)
     write_file(url_brands, 'TSUM_brands_full', params=2)
-    # write_file(url_brands, 'brands_search_wolford_rbrsl')
 
     print("End: " + str(datetime.datetime.now()))
 
