@@ -84,18 +84,6 @@ def scroll_brands(el):
     except Exception as e:
         print(el.upper() + " not found in the list, skipping.")
         print(e)
-    # for n in range(0, 6):
-    #     time.sleep(0.5)
-    #     driver.execute_script('window.scrollBy(0, 1400)')
-    #     try:
-    #         open_brand(el)
-    #         break
-    #     except Exception as e:
-    #         if n == 5:
-    #             print(el.upper() + " not found in the list, skipping.")
-    #             break
-    #         else:
-    #             pass
     global scrolled
     scrolled = True
 
@@ -207,7 +195,6 @@ def get_data():
             print(e)
             global failed_pages
             failed_pages['pages'].append(re.sub('[^0-9]', '', str(driver.current_url)[-3:]).replace('=', ''))
-    # print("Total: \n" + str(tables))
     print("Page {}".format(str(re.sub('[^0-9]', '', str(driver.current_url)[-3:]).replace('=', ''))))
     print('Prices obtained')
 
@@ -219,7 +206,6 @@ def write_data():
             change_page()
     except:
         get_data()
-    # print(tables)
 
 
 def write_file(url, filename, params=0):
