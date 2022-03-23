@@ -2,9 +2,12 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
 from os import path
+from logging import exception
 import re
 import json
 import time
@@ -15,10 +18,12 @@ print("Start: " + str(datetime.datetime.now()))
 options = Options()
 prefs = {"profile.managed_default_content_settings.images": 2}
 options.add_experimental_option('prefs', prefs)
-# driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
+# driver = webdriver.Chrome(options=options)
+driver.set_window_position(-2000, 0)
 driver.maximize_window()
 driver.implicitly_wait(6)
+AC = ActionChains(driver)
 
 url_f = "https://www.tsum.ru/catalog/obuv-18405/?availability=2&page=1"
 url_f_sumki = 'https://www.tsum.ru/catalog/sumki-18438/'
@@ -60,7 +65,7 @@ categories = [
 
 present = '//*[@id="catalog"]/div[2]/div/div/div/div[1]/filter-desktop/div[5]/div/div/div/div/div[3]' \
           '/div/perfect-scrollbar/div/div[1]/div/div[1]/div/label'
-show = "//div[@title='Следующая страница']"
+show = "//div[@class='js-pagination-next pagination__button pagination__button_type_next']"
 pagination_class_selected = 'pagination__link pagination__link_full pagination__link_state_current ng-star-inserted'
 last_page = '//div[@id="attrId"]/div/div[2]/span/a[@title="Последняя страница"]'
 failed_pages = {'pages': []}
@@ -72,37 +77,103 @@ closed = False
 scrolled = False
 
 
+def set_to_list(set):
+    return [*set, ]
+
+
 def open_brands():
     driver.get(url_brands)
+    brands_list = []
+    driver.find_element(By.XPATH, '//span[contains(@class, "header__gender ng-star-inserted") and contains(text(), "{}")]'.format(categories[2])).click()
     for c in categories:
+        driver.execute_script('window.scrollBy(0, -14000)')
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+            (By.XPATH, '//span[contains(@class, "header__gender ng-star-inserted") and contains(text(), "{}")]'.format(c))))
+        driver.find_element(By.XPATH,
+                            '//span[contains(@class, "header__gender ng-star-inserted") and contains(text(), "{}")]'
+                            .format(c)).click()
+        time.sleep(2)
         try:
             driver.find_element_by_xpath(
                 '//div[@class="header__gender-switch header__gender-switch_desktop"]//span[contains(text(), "{}")]'
                     .format(c)).click()
-            driver.find_element_by_xpath("//a[contains(text(), 'Бренды')]")
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//a[@title="Бренды"]')))
+            driver.find_element_by_xpath("//a[contains(text(), 'Бренды')]").click()
         except Exception as e:
             print('Category ' + c + ' already open')
 
-        for el in brands:
-            global scrolled
-            scrolled = False
-            scroll_brands()
-            try:
-                driver.find_element_by_xpath('//span[contains(text(), "{}")]'.format(el)).click()
-                write_data()
-            except Exception as e:
-                print(el + " not found in the list, skipping.")
+        print("/"*40)
+        scroll_brands()
+        for n in (driver.find_elements(By.XPATH, '//span[@class="brand-item__name ng-star-inserted"]')):
+            # brands_list.append(driver.find_element(
+            #     By.XPATH, '//span[@class="brand-item__name ng-star-inserted"][{}]'.format(n)).text)
+            print(n.text)
+            brands_list.append(n.text)
+
+    brands_list = set(brands_list)
+    print(brands_list)
+    available_brands = set(brands_list) & set(brands)
+    search_brands = set.union(available_brands, search_values)
+    print(set_to_list(search_brands))
+    search(set_to_list(search_brands))
+        # try:
+        #     search(search_brands)
+        # except:
+        #     print("Attempting to close popping iframe")
+        #     iframe = driver.find_element(
+        #         By.XPATH, '//iframe[contains(@id, "fl-")]')
+        #     driver.switch_to.frame(iframe)
+        #     driver.find_element_by_xpath('//button[@class="close"]').click()
+        #     print("Popup closed.")
+        #     driver.switch_to.default_content()
+        #     search(search_brands)
+
+        #TODO: DEPRECATED
+        # for el in brands:
+        #     global scrolled
+        #     scrolled = False
+        #     scroll_brands()
+        #     try:
+        #         try:
+        #             driver.find_element_by_xpath('//span[contains(text(), "{}")]'.format(el)).click()
+        #         except Exception as e:
+        #             print("Attempting to close popping iframe")
+        #             iframe = driver.find_element(
+        #                 (By.XPATH, '//iframe[contains(@id, "fl-")]'))
+        #             driver.switch_to.frame(iframe)
+        #             driver.find_element_by_xpath('//button[@class="close"]').click()
+        #             print("Popup closed.")
+        #             driver.switch_to.default_content()
+        #             driver.find_element_by_xpath('//span[contains(text(), "{}")]'.format(el)).click()
+        #         write_data()
+        #     except Exception as e:
+        #         print(el + " not found in the list, skipping.")
 
 
-def scroll_brands():
-    driver.get(url_brands)
+def scroll_brands(change_url=False):
+    if change_url:
+        driver.get(url_brands)
     driver.execute_script('window.scrollBy(0, 7000)')
     time.sleep(1)
-    WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+    print("Scrolling down to brand-list__full-show")
+    WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//span[@class="brand-list__full-show"]')
     ))
-    driver.find_element_by_xpath('//span[@class="brand-list__full-show"]').click()
+    # AC.move_to_element(driver.find_element(By.XPATH, '//span[@class="brand-list__full-show"]')).perform()
+    try:
+        driver.find_element_by_xpath('//span[@class="brand-list__full-show"]').click()
+    except Exception as e:
+        print("Attempting to close popping iframe")
+        iframe = driver.find_element(
+            By.XPATH, '//iframe[contains(@id, "fl-")]')
+        driver.switch_to.frame(iframe)
+        driver.find_element_by_xpath('//button[@class="close"]').click()
+        print("Popup closed.")
+        driver.switch_to.default_content()
+        driver.find_element_by_xpath('//span[@class="brand-list__full-show"]').click()
     time.sleep(2)
+    driver.execute_script('window.scrollBy(0, 7000)')
+    time.sleep(1)
     driver.execute_script('window.scrollBy(0, 7000)')
     time.sleep(1)
     driver.execute_script('window.scrollBy(0, 7000)')
@@ -114,15 +185,29 @@ def scroll_brands():
     scrolled = True
 
 
-def search():
-    driver.get(url_brands)
-    for b in search_values:
+def search(values, change_url=False):
+    if change_url:
+        driver.get(url_brands)
+    for b in values:
+        print('Start search')
         # WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//button[@class="search-mobile__open-button"]')))
-        driver.find_element_by_xpath('//div[@class="header__search-form"]').click()
-        driver.find_element_by_xpath('//input[@class="field__input"]').clear()
+        try:
+            driver.find_element_by_xpath('//div[@class="header__search-form"]').click()
+            driver.find_element_by_xpath('//input[@class="field__input"]').clear()
+        except:
+            print("Attempting to close popping iframe")
+            iframe = driver.find_element(
+                By.XPATH, '//iframe[contains(@id, "fl-")]')
+            driver.switch_to.frame(iframe)
+            driver.find_element_by_xpath('//button[@class="close"]').click()
+            print("Popup closed.")
+            driver.switch_to.default_content()
+            driver.find_element_by_xpath('//div[@class="header__search-form"]').click()
+            driver.find_element_by_xpath('//input[@class="field__input"]').clear()
+        print("Search for: " + b)
         driver.find_element_by_xpath('//input[@class="field__input"]').send_keys(b)
         driver.find_element_by_xpath('//input[@class="field__input"]').send_keys(Keys.ENTER)
-        time.sleep(2)
+        # time.sleep(2)
         try:
             write_data()
         except Exception as e:
@@ -131,30 +216,44 @@ def search():
 
 def change_page():
     try:
+        # AC.move_to_element(driver.find_element(By.XPATH, show)).perform()  # May not be necessary?
         driver.find_element_by_xpath(show).click()
         time.sleep(2)
     except Exception as e:
+        exception(e)
         try:
-            print("Attempting to close iframe")
-            iframe = driver.find_element_by_id("fl-297767")
+            print("Attempting to close popping iframe")
+            iframe = driver.find_element(
+                (By.XPATH, '//iframe[contains(@id, "fl-")]'))
             driver.switch_to.frame(iframe)
             driver.find_element_by_xpath('//button[@class="close"]').click()
             driver.switch_to.default_content()
             driver.find_element_by_xpath(show).click()
         except Exception as e:
-            print(e)
-            print("Attempting to close lead form")
+            exception(e)
+            print("Attempt failed")
             try:
-                driver.execute_script("document.querySelector('.lead-form__close').click();")
+                print("Attempting to close iframe")
+                iframe = driver.find_element_by_id("fl-297767")
+                driver.switch_to.frame(iframe)
+                driver.find_element_by_xpath('//button[@class="close"]').click()
+                driver.switch_to.default_content()
                 driver.find_element_by_xpath(show).click()
             except Exception as e:
+                exception(e)
                 print(e)
-                print("Attempting to refresh the page")
-                driver.refresh()
-                time.sleep(1)
-                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, show)))
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                driver.find_element_by_xpath(show).click()
+                print("Attempting to close lead form")
+                try:
+                    driver.execute_script("document.querySelector('.lead-form__close').click();")
+                    driver.find_element_by_xpath(show).click()
+                except Exception as e:
+                    print(e)
+                    print("Attempting to refresh the page")
+                    driver.refresh()
+                    time.sleep(1)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, show)))
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    driver.find_element_by_xpath(show).click()
         time.sleep(2)
 
 
@@ -172,7 +271,9 @@ def get_data():
     print(elems)
     for el in elems:
         counter += 1
-        driver.execute_script('window.scrollBy(0, {})'.format(counter * 20))
+        driver.execute_script("arguments[0].scrollIntoView();", el)
+        # AC.move_to_element(el).perform()
+        # driver.execute_script('window.scrollBy(0, {})'.format(counter * 20))
         old_price = 0
         discount = 0
         try:
@@ -278,9 +379,10 @@ def write_file(url, filename, params=0):
             open_brands()
         elif params == 2:
             """ ==== SEARCH ==== """
-            search()
+            search(search_values, change_url=True)
     except Exception as e:
         print("Error caught, terminating: " + str(e))
+        exception(e)
     print('Writing file...')
     if not path.exists('{}.json'.format(filename)):
         with open('{}.json'.format(filename), 'w') as t:
@@ -305,7 +407,7 @@ def write_file(url, filename, params=0):
 def run():
 
     write_file(url_brands, 'TSUM_brands_full', params=1)
-    write_file(url_brands, 'TSUM_brands_full', params=2)
+    # write_file(url_brands, 'TSUM_brands_full', params=2)
 
     print("End: " + str(datetime.datetime.now()))
 
