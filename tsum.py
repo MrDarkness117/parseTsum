@@ -1,3 +1,5 @@
+import logging
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.wait import WebDriverWait
@@ -6,12 +8,16 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
-from os import path
 from logging import exception
+from smtplib import SMTP
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from os import path
 import re
 import json
 import time
 import datetime
+import xlsxwriter
 
 print("Start: " + str(datetime.datetime.now()))
 
@@ -24,6 +30,16 @@ driver.set_window_position(-2000, 0)
 driver.maximize_window()
 driver.implicitly_wait(6)
 AC = ActionChains(driver)
+
+output = xlsxwriter.Workbook('C:\\Users\\admin\\Documents\\outputs\\ЦУМ {}.xlsx'.format(str(datetime.date.today())))
+sheet = output.add_worksheet('ЦУМ')
+sheet.write('A1', 'Артикул')
+sheet.write('B1', 'Цена')
+sheet.write('C1', 'Старая цена')
+sheet.write('D1', 'Скидка')
+sheet.write('E1', 'Бренд')
+sheet.write('F1', 'Артикул производителя')
+sheet.write('G1', 'Ссылка')
 
 url_f = "https://www.tsum.ru/catalog/obuv-18405/?availability=2&page=1"
 url_f_sumki = 'https://www.tsum.ru/catalog/sumki-18438/'
@@ -50,11 +66,13 @@ brands = [
     'Lemon Jelly', "L'Impermeabile", 'Marsell', 'Merola Gloves', 'Moose Knuckles', 'Moreschi', 'Moschino', 'Panchic',
     'Pantanetti', 'Parajumpers', 'Pasotti', 'Pertini', 'Pierre Cardin', 'Pollini', 'Portolano', 'Premiata',
     'Principe Di Bologna', 'RBRSL', "Reptile's House", 'Roberto Cavalli', 'Rocco P', 'Sergio Rossi', 'SPRAYGROUND',
-    'Stemar', 'Stuart Weitzman', 'V SEASON', "VIC MATIE'", 'Voile Blanche', 'What For', 'Wolford', '3JUIN',
-    'Premiata will be', 'Sprayground'
+    'Stemar', 'Stuart Weitzman', 'V SEASON', "VIC MATIE'", "Vic Matie", 'Voile Blanche', 'What For', 'Wolford', '3JUIN',
+    'Premiata will be', 'Sprayground', 'Domrebel', 'GIUSEPPE ZANOTTI DESIGN', 'Giuseppe Zanotti Design',
+    'GIUSEPPE ZANOTTI', 'Giuseppe Zanotti'
 ]
 
-search_values = ['Wolford', 'RBRSL', "Rocco P", "DKNY", 'Flower Mountain', 'HIDE&JACK', 'Inuikii', 'Lancaster']
+search_values = ['Giuseppe Zanotti']
+# search_values = ['Wolford', 'RBRSL', "Rocco P", "DKNY", 'Flower Mountain', 'HIDE&JACK', 'Inuikii', 'Lancaster']
 # search_values = ['Coccinelle', 'Wolford', 'RBRSL', "Rocco P", "DKNY", 'Flower Mountain', 'HIDE&JACK', 'Inuikii', 'Lancaster']
 
 categories = [
@@ -72,13 +90,14 @@ failed_pages = {'pages': []}
 
 tables = {}
 count = 0
+row = 2
 closed = False
 
 scrolled = False
 
 
-def set_to_list(set):
-    return [*set, ]
+def set_to_list(array):
+    return [*array, ]
 
 
 def open_brands():
@@ -116,6 +135,7 @@ def open_brands():
     search_brands = set.union(available_brands, search_values)
     print(set_to_list(search_brands))
     search(set_to_list(search_brands))
+
         # try:
         #     search(search_brands)
         # except:
@@ -345,9 +365,18 @@ def get_data():
                                                                                                          "")
                     .replace("коричневого ", "").split(' '))
             if article_brand[0] == ' ': article_brand = article_brand[1:]
-            # print(article_brand)
 
             tables[article] = [price, old_price, discount, brand, article_brand, link]
+            global row
+            sheet.write('A'+str(row), article)
+            sheet.write('B'+str(row), price)
+            sheet.write('C'+str(row), old_price)
+            sheet.write('D'+str(row), discount)
+            sheet.write('E'+str(row), brand)
+            sheet.write('F'+str(row), article_brand)
+            sheet.write('G'+str(row), link)
+            row += 1
+
         except Exception as e:
             print("Exception detected while parsing: " + str(e))
             global failed_pages
@@ -362,10 +391,8 @@ def write_data():
         while driver.find_element_by_xpath(last_page).get_attribute('class') != pagination_class_selected:
             get_data()
             change_page()
-            # time.sleep(2)
     except:
         get_data()
-    # print(tables)
 
 
 def write_file(url, filename, params=0):
@@ -374,15 +401,20 @@ def write_file(url, filename, params=0):
             """ ==== FULL ==== """
             driver.get(url)
             write_data()
+            driver.quit()
         elif params == 1:
             """ ==== BRANDS ==== """
             open_brands()
+            driver.quit()
         elif params == 2:
             """ ==== SEARCH ==== """
             search(search_values, change_url=True)
+            driver.quit()
+        output.close()
     except Exception as e:
         print("Error caught, terminating: " + str(e))
         exception(e)
+        output.close()
     print('Writing file...')
     if not path.exists('{}.json'.format(filename)):
         with open('{}.json'.format(filename), 'w') as t:
@@ -403,11 +435,21 @@ def write_file(url, filename, params=0):
         json.dump(failed_pages, p, ensure_ascii=False, indent=4)
         p.close()
 
+    try:
+        mail = SMTP()
+        mail.connect(host='https://mail.noone.ru/', port=587)
+        mail.login(user='m.romantsov@noone.ru', password='Mihailo117!')
+        # mail.sendmail()
+        mail.quit()
+    except Exception as e:
+        print("Send mail error")
+        exception(e)
+
 
 def run():
 
-    write_file(url_brands, 'TSUM_brands_full', params=1)
-    # write_file(url_brands, 'TSUM_brands_full', params=2)
+    write_file(url_brands, 'C:\\Users\\admin\\Documents\\outputs\\TSUM_brands_full', params=1)
+    write_file(url_brands, 'C:\\Users\\admin\\Documents\\outputs\\TSUM_brands_full', params=2)
 
     print("End: " + str(datetime.datetime.now()))
 
