@@ -1,5 +1,6 @@
 import logging
 import traceback
+from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -86,10 +87,13 @@ categories = [
 present = '//*[@id="catalog"]/div[2]/div/div/div/div[1]/filter-desktop/div[5]/div/div/div/div/div[3]' \
           '/div/perfect-scrollbar/div/div[1]/div/div[1]/div/label'
 show = "//div[@class='js-pagination-next pagination__button pagination__button_type_next']"
-pagination_class_selected = 'pagination__link pagination__link_full pagination__link_state_current ng-star-inserted'
+pagination_class_selected = 'styles_numberBtn__6378cbe9 styles_active__6378cbe9'
 last_page = '//div[@id="attrId"]/div/div[2]/span/a[@title="Последняя страница"]'
+next_page = '//div[@class="js-pagination-next pagination__button pagination__button_type_next"]'
+next_page_disabled = 'js-pagination-next pagination__button pagination__button_disabled pagination__button_type_next'
 failed_pages = {'pages': []}
 
+item_links = []
 tables = {}
 count = 0
 row = 2
@@ -106,30 +110,30 @@ def set_to_list(array):
 
 def open_brands():
     driver.get(url_brands)
+    # driver.find_element(By.XPATH, '')
     brands_list = []
     # driver.find_element(By.XPATH, '//span[contains(@class, "header__gender ng-star-inserted") and contains(text(), "{}")]'.format(categories[2])).click()
     for c in categories:
         if c == categories[0]:
             pass
         else:
-            driver.execute_script('window.scrollBy(0, -20000)')
-            WebDriverWait(driver, 60).until(EC.element_to_be_clickable(
-                (By.XPATH, '//a[contains(@class, "style__link___DT6kW") and contains(text(), "{}")]'.format(c))))
-            driver.find_element(By.XPATH,
-                                '//span[contains(@class, "header__gender ng-star-inserted") and contains(text(), "{}")]'
-                                .format(c)).click()
-            # WebDriverWait(driver, 60).until(
-            #     EC.element_to_be_clickable((By.XPATH, '//a[contains(text(), "Бренды")]'))).click()
-            time.sleep(2)
-        try:
-            driver.find_element(
-                By.XPATH,
-                '//div[@class="header__gender-switch header__gender-switch_desktop"]//span[contains(text(), "{}")]'
-                    .format(c)).click()
-            WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//a[@title="Бренды"]')))
-            driver.find_element(By.XPATH, "//a[contains(text(), 'Бренды')]").click()
-        except Exception as e:
-            print('Category ' + c + ' already open')
+            try:
+                driver.execute_script('window.scrollBy(0, -20000)')
+                WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, f'//a[contains(text(), "{c}")]'))).click()
+                    # (By.XPATH, f'//a[contains(@class, "style__link___DT6kW") and contains(text(), "{c}")]')))
+                WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//a[text()="Бренды"]'))).click()
+                # AC.move_to_element(link).click().perform()
+                time.sleep(2)
+            # driver.execute_script('window.scrollBy(0, -20000)')
+            # link = WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//a[text()="Бренды"]')))
+            # link.click()
+            except:
+                try:
+                    print("Old page?")
+                    WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//a[contains(@class, "brand-list__full-show")]'))).click()
+                except Exception as e:
+                    exception(e)
+                    print('Category ' + c + ' already open')
 
         print("/"*40)
         scroll_brands()
@@ -185,23 +189,7 @@ def scroll_brands(change_url=False):
     if change_url:
         driver.get(url_brands)
     driver.execute_script('window.scrollBy(0, 7000)')
-    # time.sleep(1)
     print("Scrolling down to brand-list__full-show")
-    # WebDriverWait(driver, 60).until(EC.visibility_of_element_located(
-    #     (By.XPATH, '//span[@class="brand-list__full-show"]')
-    # ))
-    # AC.move_to_element(driver.find_element(By.XPATH, '//span[@class="brand-list__full-show"]')).perform()
-    # try:
-    #     driver.find_element(By.XPATH, '//span[@class="brand-list__full-show"]').click()
-    # except Exception as e:
-    #     print("Attempting to close popping iframe")
-    #     iframe = driver.find_element(
-    #         By.XPATH, '//iframe[contains(@id, "fl-")]')
-    #     driver.switch_to.frame(iframe)
-    #     driver.find_element(By.XPATH, '//button[@class="close"]').click()
-    #     print("Popup closed.")
-    #     driver.switch_to.default_content()
-    #     driver.find_element(By.XPATH, '//span[@class="brand-list__full-show"]').click()
     time.sleep(2)
     driver.execute_script('window.scrollBy(0, 7000)')
     time.sleep(1)
@@ -221,11 +209,10 @@ def search(values, change_url=False):
         driver.get(url_brands)
     for b in values:
         print('Start search')
-        # WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//button[@class="search-mobile__open-button"]')))
+        search_form = driver.find_element(By.XPATH, '//input[@placeholder="Поиск"]')
         try:
-            search_form = driver.find_element(By.XPATH, '//div[@class="header__search-form"]')
             AC.move_to_element(search_form).click(search_form).perform()
-            driver.find_element(By.XPATH, '//input[@class="field__input"]')
+            driver.find_element(By.XPATH, '//input[@placeholder="Поиск"]')
         except:
             print("Attempting to close popping iframe")
             iframe = driver.find_element(
@@ -235,22 +222,22 @@ def search(values, change_url=False):
             print("Popup closed.")
             driver.switch_to.default_content()
             AC.move_to_element(search_form).click(search_form).perform()
-            driver.find_element(By.XPATH, '//input[@class="field__input"]').clear()
+            driver.find_element(By.XPATH, '//input[@placeholder="Поиск"]').clear()
         print("Search for: " + b)
-        driver.find_element(By.XPATH, '//input[@class="field__input"]').clear()
-        driver.find_element(By.XPATH, '//input[@class="field__input"]').send_keys(b)
-        driver.find_element(By.XPATH, '//input[@class="field__input"]').send_keys(Keys.ENTER)
+        driver.find_element(By.XPATH, '//input[@placeholder="Поиск"]').clear()
+        driver.find_element(By.XPATH, '//input[@placeholder="Поиск"]').send_keys(b)
+        driver.find_element(By.XPATH, '//input[@placeholder="Поиск"]').send_keys(Keys.ENTER)
         # time.sleep(2)
         try:
             write_data()
         except Exception as e:
             print("Failure in finding elements")
+            exception(e)
 
 
 def change_page():
     try:
-        # AC.move_to_element(driver.find_element(By.XPATH, show)).perform()  # May not be necessary?
-        driver.find_element(By.XPATH, show).click()
+        AC.move_to_element(driver.find_element(By.XPATH, next_page)).click().perform()
         time.sleep(2)
     except Exception as e:
         exception(e)
@@ -261,7 +248,7 @@ def change_page():
             driver.switch_to.frame(iframe)
             driver.find_element(By.XPATH, '//button[@class="close"]').click()
             driver.switch_to.default_content()
-            driver.find_element(By.XPATH, show).click()
+            driver.find_element(By.XPATH, next_page).click()
         except Exception as e:
             exception(e)
             print("Attempt failed")
@@ -271,32 +258,31 @@ def change_page():
                 driver.switch_to.frame(iframe)
                 driver.find_element(By.XPATH, '//button[@class="close"]').click()
                 driver.switch_to.default_content()
-                driver.find_element(By.XPATH, show).click()
+                driver.find_element(By.XPATH, next_page).click()
             except Exception as e:
                 exception(e)
                 print("Attempting to close lead form")
                 try:
                     driver.execute_script("document.querySelector('.lead-form__close').click();")
-                    driver.find_element(By.XPATH, show).click()
+                    driver.find_element(By.XPATH, next_page).click()
                 except Exception as e:
                     exception(e)
                     print("Attempting to refresh the page")
                     driver.refresh()
                     time.sleep(1)
-                    WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, show)))
+                    WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, next_page)))
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                    driver.find_element(By.XPATH, show).click()
+                    driver.find_element(By.XPATH, next_page).click()
         time.sleep(2)
 
 
 def get_data():
-    # driver.execute_script('window.scrollBy(0, -7000)')
     print('Get prices')
-    elems_var = '//div[@class="product-list__products ng-star-inserted"]/div'
+    elems_var = '//div[@class="styles__productList___e1E5m"]/div'
     WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.XPATH, elems_var)))
     elems = driver.find_elements(By.XPATH, elems_var)
     WebDriverWait(driver, 60).until(EC.visibility_of_element_located((
-        By.XPATH, '//div[@class="product-list__products ng-star-inserted"]/div//div[last()]'
+        By.XPATH, '//div[@class="styles__productList___e1E5m"]/div[last()]'
     )))
     counter = 0
     print('[begin gather loop]')
@@ -304,126 +290,12 @@ def get_data():
     for el in elems:
         counter += 1
         driver.execute_script("arguments[0].scrollIntoView();", el)
-        # AC.move_to_element(el).perform()
-        # driver.execute_script('window.scrollBy(0, {})'.format(counter * 20))
         price = 'Error'
         old_price = 0
         discount = 0
         try:
-            title = str(el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]'
-                                                 '/div[{}]/div/div/a/*[1]'.format(counter)).get_attribute('title'))
-            # section_base = '//div[@class="product-list__products ng-star-inserted"]/div[{}]'.format(counter)
-
-            # for bit in [
-            #     '/div/div/a',
-            #     '//span[@class="product__price-wrapper"]/span/span/span',
-            #     '/div//a/p[@class="product__brand"]',
-            # ]:
-            #     WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, section_base + bit)))
-            try:
-                article = re.sub("[^0-9]", '', el.find_element_by_xpath(
-                    '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                    '/div/div/a'.format(counter)).get_attribute('href'))[:7]
-            except Exception as e:
-                print("Failed to obtain article.")
-                exception(e)
-                continue
-
-            try:
-                WebDriverWait(driver, 0.2).until(EC.visibility_of_element_located(
-                    (By.XPATH, '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                               '//span[@class="price"]'.format(counter))))
-                price = re.sub("[^0-9]", '', el.find_element(By.XPATH,
-                                                                 '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                                 '//span[@class="price"]/span'.format(
-                                                                     counter)).text)
-            except:
-                try:
-                    old_price = re.sub("[^0-9]", '', el.find_element(By.XPATH,
-                                                                     '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                                     '//span[@class="price price_type_old"]/span'.format(
-                                                                         counter)).text)
-                    price = re.sub("[^0-9]", '', el.find_element(By.XPATH,
-                                                                     '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                                     '//span[@class="price price_type_new"]/span'.format(
-                                                                         counter)).text)
-                except Exception as e:
-                    print("Failed to obtain price.")
-                    exception(e)
-                    continue
-
-            '''try:
-                WebDriverWait(driver, 0.2).until(EC.visibility_of_element_located(
-                    (By.XPATH, '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                                 '//span[@class="price price_type_old"]'.format(
-                                                                     counter))))
-                old_price = re.sub("[^0-9]", '', el.find_element(By.XPATH,
-                                                                 '//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                                 '//span[@class="price price_type_old"]'.format(
-                                                                     counter)).text)
-                discount = "{:.2f}".format(100 - round(int(price) / int(old_price) * 100)) + "%"
-            except:
-                print('No old price.')'''
-
-            try:
-                brand = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                 '//p[@class="product__brand"]'.format(counter)).text
-            except Exception as e:
-                print("Failed to obtain brand.")
-                traceback.print_exc()
-                continue
-
-            try:
-                link = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                '/div/div/a'.format(counter)).get_attribute('href')
-            except Exception as e:
-                print("Failed to obtain link.")
-                exception(e)
-                continue
-
-            try:
-                description = el.find_element_by_xpath('//div[@class="product-list__products ng-star-inserted"]/div[{}]'
-                                                       '//p[@class="product__description"]'.format(counter)).text
-            except Exception as e:
-                print("Failed to obtain description.")
-                exception(e)
-                continue
-
-            article_brand = ' '.join(
-                ' '.join(title.replace(description.lower() + ' ', '').replace(brand + ' ', "").replace("женские", "")
-                    .replace("женское", "").replace("мужское", "").replace("женская", "").replace("мужская", "").replace("мужские", "")
-                    .replace("детская", "").replace("детские", "").replace("детское", "").replace("мужской", "").replace("женский", "")
-                    .replace("детский", "").split(' ')[5:]).replace("руб., арт. ", "")
-                    .replace("| ", "").replace(" Фото 1", "").replace("Фото", "").replace("арт. ", "").replace("цвета ", "")
-                    .replace("цене ", "").replace(price, "").replace('по ', "").replace("бежевого ", "").replace("черного ", "")
-                    .replace("серого ", '').replace("белого ", "").replace("темно-синего ", "").replace("хаки ", "")
-                    .replace("серебряного ", "").replace("синего ", "").replace("розового ", "").replace("золотого ","")
-                    .replace("коричневого ", "").replace('стразами', '').replace("хлопковая", "")
-                    .split(' '))
-            try:
-                if article_brand[0] == ' ': article_brand = article_brand[1:]
-                # if article_brand[0] == '0' and article_brand[1] == ' ': article_brand = article_brand[2:]
-            except IndexError:
-                pass
-            article_errors = [' ', '№1', "WILL BE", '']
-            if article_brand in article_errors:
-                print("{}: {}".format(brand, article_brand))
-                article_brand = open_product_page_and_parse(link)
-            # if article_brand[0] == '0' and article_brand[1] == ' ':
-            #     article_brand = open_product_page_and_parse(link)
-            if price not in title or (article_brand[0] == '0' and article_brand[1] == ' '):
-                article_brand = open_product_page_and_parse(link)
-
-            tables[article] = [price, discount, brand, article_brand, link]  # no old price
-            global row
-            sheet.write('A'+str(row), article)
-            sheet.write('B'+str(row), price)
-            sheet.write('C'+str(row), old_price)
-            sheet.write('D'+str(row), discount)
-            sheet.write('E'+str(row), brand)
-            sheet.write('F'+str(row), article_brand)
-            sheet.write('G'+str(row), link)
-            row += 1
+            link = el.find_element_by_xpath('//div[{}]/div/a'.format(counter)).get_attribute('href')
+            item_links.append(link)
 
         except Exception as e:
             print("Exception detected while parsing: " + str(e))
@@ -432,7 +304,7 @@ def get_data():
             failed_pages['pages'].append(re.sub('[^0-9]', '', str(driver.current_url)[-3:]).replace('=', ''))
     # print("Total: \n" + str(tables))
     print("Page {}".format(str(re.sub('[^0-9]', '', str(driver.current_url)[-3:]).replace('=', ''))))
-    print('Prices obtained')
+    print('Links obtained')
 
 
 def open_product_page_and_parse(link):
@@ -442,18 +314,49 @@ def open_product_page_and_parse(link):
     driver.get(link)
     article_brand_raw = driver.find_element(By.XPATH, '//li[contains(text(), "Артикул производителя")]').text
     article_brand = article_brand_raw.replace("Артикул производителя: ", '')
+    brand = driver.find_element(By.XPATH, '//div[@class="item__specifications"]/h1/a').text
+    article_raw = driver.find_element(By.XPATH, '//li[contains(text(), "Артикул")][1]').text
+    article = article_raw.replace("Артикул: ", "")
+    price = 0
+    price_old = 0
+    price_new = 0
+    discount = 0
+    try:
+        price = re.sub('[^0-9]', '', driver.find_element(By.XPATH, '//div[@class="price price_type_retail ng-star-inserted"]/span').text)
+    except:
+        price_old = re.sub('[^0-9]', '', driver.find_element(By.XPATH, '//div[@class="price price_type_old ng-star-inserted"]/span').text)
+        price_new = re.sub('[^0-9]', '', driver.find_element(By.XPATH, '//div[@class="price price_type_new ng-star-inserted"]/span').text)[:-2]
+        discount = re.sub('[^0-9]', '', driver.find_element(By.XPATH, '//div[@class="price price_type_new ng-star-inserted"]/span').text)[-2:]
+    if price != 0:
+        price_new = price
     driver.close()
     driver.switch_to.window(default_window)
-    return article_brand
+    tables[article] = [price_old, price_new, discount, brand, article_brand, link]
+    global row
+    sheet.write('A' + str(row), article)
+    sheet.write('B' + str(row), price_new)
+    sheet.write('C' + str(row), price_old)
+    sheet.write('D' + str(row), discount)
+    sheet.write('E' + str(row), brand)
+    sheet.write('F' + str(row), article_brand)
+    sheet.write('G' + str(row), link)
+    row += 1
 
 
 def write_data():
     try:
-        while driver.find_element(By.XPATH, last_page).get_attribute('class') != pagination_class_selected:
+        while str(driver.find_element(By.XPATH, next_page).get_attribute('class')) != next_page_disabled:
             get_data()
             change_page()
-    except:
+    except Exception as e:
+        print(driver.find_element(By.XPATH, next_page).get_attribute('class'))
+        print(e)
         get_data()
+
+
+def open_urls():
+    for link in item_links:
+        open_product_page_and_parse(link)
 
 
 def write_file(url, filename, params=0):
@@ -462,18 +365,21 @@ def write_file(url, filename, params=0):
             """ ==== FULL ==== """
             driver.get(url)
             write_data()
+            open_urls()
             driver.quit()
         elif params == 1:
             """ ==== BRANDS ==== """
-            open_brands()
+            open_brands()  # FIXME: Старое, не работает
+            open_urls()
             driver.quit()
         elif params == 2:
             """ ==== SEARCH ==== """
-            search(search_values, change_url=True)
+            search(search_values, change_url=True)  # FIXME: Старое, не работает
             driver.quit()
     except Exception as e:
         print("Error caught, terminating: " + str(e))
         exception(e)
+        driver.quit()
         # output.close()
     print('Writing file...')
     if not path.exists('{}.json'.format(filename)):
@@ -509,11 +415,7 @@ def write_file(url, filename, params=0):
                           'miromantsov@gmail.com',
                           'mihailogoogle117'
                           )
-        # mail = SMTP()
-        # mail.connect(host='https://mail.noone.ru/', port=25)
-        # mail.login(user='m.romantsov@noone.ru', password='Mihailo117!')
-        # # mail.sendmail()
-        # mail.quit()
+
     except Exception as e:
         print("Send mail error")
         exception(e)

@@ -1,3 +1,5 @@
+import traceback
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.wait import WebDriverWait
@@ -27,7 +29,7 @@ url_brands = "https://www.rendez-vous.ru/catalog/brands/"
 
 brands = [
     "Aldo Brue", "AGL", "BANU", "Bally", 'Bresciani', 'Brimarts', 'Carlo Visintini', 'Casadei', 'Casheart,',
-    'Cerruti 1881', 'Cesare Casadei', 'Coccinelle', 'DKNY', 'Doria Maria', 'Doucal\'s', 'F_WD', 'Fabi', 'Fabrizio Lesi',
+    'Cerruti 1881', 'Cesare Casadei', 'VERSACE JEANS COUTURE','Coccinelle', 'DKNY', 'Doria Maria', 'Doucal\'s', 'F_WD', 'Fabi', 'Fabrizio Lesi',
     'Ferre Milano', 'Flower Mountain', 'Franceschetti', 'Frasconi', 'Fratelli Rossetti', 'Fratelli Rossetti One',
     'Gianni Chiarini', 'Goose Tech', 'GUM', 'HIDE&JACK', 'Ice Play', 'Iceberg', 'In The Box', 'Inuikii',
     'John Galliano', 'John Richmond', 'Kalliste', 'Kat Maconie', 'Kate Spade', 'Lancaster', 'Landi', 'Le Silla',
@@ -75,7 +77,7 @@ scrolled = False
 
 
 def open_brands():
-    driver.get(url_brands)
+    # driver.get(url_brands)
 
     for el in brands:
         global scrolled
@@ -94,8 +96,8 @@ def scroll_brands(el):
     driver.execute_script('window.scrollBy(0, -7000)')
     try:
         actions = ActionChains(driver)
-        actions.move_to_element(driver.find_element_by_xpath('//div[@class="js-quick-search-source brand-popover"]'
-                                                             '//a[contains(text(), "{}")]'.format(el.upper()))).perform()
+        actions.move_to_element(driver.find_element(By.XPATH, '//div[@class="js-quick-search-source brand-popover"]'
+                                                             '//a[contains(text(), " {} ")]'.format(el.upper()))).perform()
         open_brand(el)
     except Exception as e:
         print(el.upper() + " not found in the list, skipping.")
@@ -217,7 +219,7 @@ def get_data():
             row += 1
         except Exception as e:
             print("Exception detected while parsing: ")
-            print(e)
+            traceback.print_exc()
             global failed_pages
             failed_pages['pages'].append(re.sub('[^0-9]', '', str(driver.current_url)[-3:]).replace('=', ''))
     print("Page {}".format(str(re.sub('[^0-9]', '', str(driver.current_url)[-3:]).replace('=', ''))))
@@ -250,7 +252,9 @@ def write_file(url, filename, params=0):
             driver.quit()
         output.close()
     except Exception as e:
-        print("Error caught, terminating: " + str(e))
+        print("Error caught, terminating:")
+        traceback.print_exc()
+        driver.quit()
     print('Writing file...')
     if not path.exists('{}.json'.format(filename)):
         with open('{}.json'.format(filename), 'w') as t:
