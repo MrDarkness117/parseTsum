@@ -870,3 +870,5 @@ venv/Scripts/pip3.exe
 venv/Scripts/python.exe
 venv/Scripts/pythonw.exe
 venv/Scripts/vba_extract.py
+.idea/misc.xml
+.idea/parseTsum.iml
